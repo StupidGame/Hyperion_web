@@ -163,14 +163,6 @@ function App() {
 
         setCurrentFeed(nextFeed);
         setStatus(`Updated ${new Date().toLocaleTimeString()}`);
-        setData((current) => ({
-          ...current,
-          feeds: current.feeds.map((feed) =>
-            selectedFeeds.some((selected) => selected.id === feed.id)
-              ? { ...feed, lastUpdated: Date.now() }
-              : feed,
-          ),
-        }));
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Feed loading failed.');
       } finally {
