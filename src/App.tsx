@@ -478,6 +478,46 @@ function App() {
               </div>
             ))}
           </div>
+
+          <div className="mobile-feed-stack">
+            <div className="section-heading folder-heading">
+              <Rss size={16} />
+              <span>Feeds</span>
+            </div>
+
+            <div className="feed-list">
+              {visibleFeeds.map((feed) => (
+                <article
+                  className={selection.kind === 'feed' && selection.id === feed.id ? 'feed-source active' : 'feed-source'}
+                  key={feed.id}
+                >
+                  <button type="button" onClick={() => setSelection({ kind: 'feed', id: feed.id })}>
+                    <span>{feed.title}</span>
+                    <small>{feed.rssUrl}</small>
+                  </button>
+                  <div className="row-actions">
+                    <button
+                      className="micro-button"
+                      type="button"
+                      title="Edit feed"
+                      onClick={() => setFeedEdit({ feed, title: feed.title, folderId: feed.folderId ?? '' })}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      className="micro-button danger"
+                      type="button"
+                      title="Delete feed"
+                      onClick={() => deleteFeed(feed)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {!visibleFeeds.length && <div className="empty-list">No feeds here.</div>}
+            </div>
+          </div>
         </aside>
 
         <section className="feed-rail" aria-label="Saved feeds">

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title>Hyperion RSS Reader</title>
+  <defs>
+    <linearGradient id="shell" x1="84" x2="428" y1="72" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#b8ff44" />
+      <stop offset="0.54" stop-color="#75d7ff" />
+      <stop offset="1" stop-color="#ff6b7a" />
+    </linearGradient>
+    <radialGradient id="glow" cx="31%" cy="22%" r="74%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.54" />
+      <stop offset="0.42" stop-color="#ffffff" stop-opacity="0.06" />
+      <stop offset="1" stop-color="#000000" stop-opacity="0.16" />
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#101114" />
+  <path d="M70 128c0-32 26-58 58-58h256c32 0 58 26 58 58v256c0 32-26 58-58 58H128c-32 0-58-26-58-58V128Z" fill="url(#shell)" />
+  <path d="M70 128c0-32 26-58 58-58h256c32 0 58 26 58 58v256c0 32-26 58-58 58H128c-32 0-58-26-58-58V128Z" fill="url(#glow)" />
+  <path
+    d="M150 174c103.83 0 188 84.17 188 188M150 261c55.78 0 101 45.22 101 101M153 354h.02"
+    fill="none"
+    stroke="#101114"
+    stroke-linecap="round"
+    stroke-width="46"
+  />
+  <path d="M384 118h-66l66 66v-66Z" fill="#101114" opacity="0.28" />
+</svg>
