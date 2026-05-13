@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Download,
   ExternalLink,
-  FileInput,
   Folder as FolderIcon,
   ListFilter,
   Loader2,
@@ -22,13 +21,11 @@ import {
 } from 'lucide-react';
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  downloadCsv,
-  feedsToCsv,
-  foldersToCsv,
-  importFeedsCsv,
-  importFoldersCsv,
-  type ImportStats,
-} from './csv';
+  appDataToBackupJson,
+  downloadJson,
+  importBackupJson,
+  type BackupImportStats,
+} from './backup';
 import { loadData, saveData } from './storage';
 import { fetchFeedContent, formatDate, getRssCandidates, mergeFeeds } from './rss';
 import type { AppData, FeedSelection, FeedSource, Folder, RssCandidate, RssFeed } from './types';
@@ -80,8 +77,9 @@ function fileStamp() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function summarizeImport(kind: string, stats: ImportStats) {
-  return `${kind}: ${stats.added} added, ${stats.updated} updated, ${stats.skipped} skipped.`;
+function summarizeBackupImport(stats: BackupImportStats) {
+  const settings = stats.settingsUpdated ? ' Settings updated.' : '';
+  return `All data: ${stats.folders.added} folders added, ${stats.folders.updated} folders updated, ${stats.feeds.added} feeds added, ${stats.feeds.updated} feeds updated, ${stats.folders.skipped + stats.feeds.skipped} skipped.${settings}`;
 }
 
 function App() {
@@ -108,8 +106,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showDataPanel, setShowDataPanel] = useState(false);
 
-  const feedImportRef = useRef<HTMLInputElement>(null);
-  const folderImportRef = useRef<HTMLInputElement>(null);
+  const backupImportRef = useRef<HTMLInputElement>(null);
 
   const resolvedTheme = useMemo(() => resolveThemePreference(data), [data]);
 
@@ -333,17 +330,12 @@ function App() {
     setFolderEdit(null);
   }
 
-  function exportFeeds(feeds: FeedSource[], scope: string) {
-    downloadCsv(`hyperion-${scope}-feeds-${fileStamp()}.csv`, feedsToCsv(feeds, data.folders));
-    setStatus(`${feeds.length} feeds exported`);
+  function exportAllData() {
+    downloadJson(`hyperion-all-data-${fileStamp()}.json`, appDataToBackupJson(data));
+    setStatus(`${data.folders.length} folders and ${data.feeds.length} feeds exported`);
   }
 
-  function exportFolders() {
-    downloadCsv(`hyperion-folders-${fileStamp()}.csv`, foldersToCsv(data.folders));
-    setStatus(`${data.folders.length} folders exported`);
-  }
-
-  async function importFeedFile(event: ChangeEvent<HTMLInputElement>) {
+  async function importBackupFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
     if (!file) {
@@ -352,24 +344,16 @@ function App() {
 
     const text = await file.text();
     setData((current) => {
-      const result = importFeedsCsv(text, current.feeds, current.folders);
-      setStatus(summarizeImport('Feeds', result.stats));
-      return { ...current, feeds: result.feeds, folders: result.folders };
-    });
-  }
-
-  async function importFolderFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = '';
-    if (!file) {
-      return;
-    }
-
-    const text = await file.text();
-    setData((current) => {
-      const result = importFoldersCsv(text, current.folders);
-      setStatus(summarizeImport('Folders', result.stats));
-      return { ...current, folders: result.folders };
+      try {
+        const result = importBackupJson(text, current);
+        setStatus(summarizeBackupImport(result.stats));
+        setError(null);
+        return result.data;
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Backup import failed.');
+        setStatus('Import failed');
+        return current;
+      }
     });
   }
 
@@ -568,9 +552,9 @@ function App() {
               <p>{currentFeed?.channel.description || `${visibleFeeds.length} feeds`}</p>
             </div>
             <div className="reader-tools">
-              <button className="secondary-button" type="button" onClick={() => exportFeeds(visibleFeeds, 'current')}>
+              <button className="secondary-button" type="button" onClick={exportAllData}>
                 <Download size={17} />
-                <span>Export view</span>
+                <span>Export all</span>
               </button>
               <button className="icon-button" type="button" title="Refresh" onClick={() => void loadSelection(selection, true)}>
                 {isRefreshing ? <Loader2 className="spin" size={18} /> : <RefreshCcw size={18} />}
@@ -852,35 +836,24 @@ function App() {
         <div className="modal-backdrop" role="presentation">
           <div className="modal wide">
             <div className="modal-header">
-              <h2>CSV</h2>
+              <h2>Data</h2>
               <button className="micro-button" type="button" title="Close" onClick={() => setShowDataPanel(false)}>
                 <X size={16} />
               </button>
             </div>
-            <div className="csv-grid">
-              <button className="data-action" type="button" onClick={() => exportFeeds(data.feeds, 'all')}>
+            <div className="data-grid">
+              <button className="data-action" type="button" onClick={exportAllData}>
                 <Download size={18} />
-                <strong>Export feeds</strong>
-                <span>{data.feeds.length} rows</span>
+                <strong>Export all</strong>
+                <span>{data.folders.length} folders / {data.feeds.length} feeds</span>
               </button>
-              <button className="data-action" type="button" onClick={exportFolders}>
-                <Download size={18} />
-                <strong>Export folders</strong>
-                <span>{data.folders.length} rows</span>
-              </button>
-              <button className="data-action" type="button" onClick={() => feedImportRef.current?.click()}>
+              <button className="data-action" type="button" onClick={() => backupImportRef.current?.click()}>
                 <Upload size={18} />
-                <strong>Import feeds</strong>
-                <span>CSV merge</span>
-              </button>
-              <button className="data-action" type="button" onClick={() => folderImportRef.current?.click()}>
-                <FileInput size={18} />
-                <strong>Import folders</strong>
-                <span>CSV merge</span>
+                <strong>Import all</strong>
+                <span>JSON merge</span>
               </button>
             </div>
-            <input ref={feedImportRef} className="hidden-input" type="file" accept=".csv,text/csv" onChange={importFeedFile} />
-            <input ref={folderImportRef} className="hidden-input" type="file" accept=".csv,text/csv" onChange={importFolderFile} />
+            <input ref={backupImportRef} className="hidden-input" type="file" accept=".json,application/json" onChange={importBackupFile} />
           </div>
         </div>
       )}

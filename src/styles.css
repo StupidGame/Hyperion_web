@@ -638,7 +638,7 @@ label span {
 }
 
 .segmented,
-.csv-grid {
+.data-grid {
   display: grid;
   gap: 8px;
 }
@@ -659,7 +659,7 @@ label span {
   gap: 8px;
 }
 
-.csv-grid {
+.data-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -832,7 +832,7 @@ label span {
     min-height: 44px;
   }
 
-  .csv-grid,
+  .data-grid,
   .segmented {
     grid-template-columns: 1fr;
   }
