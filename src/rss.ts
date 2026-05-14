@@ -42,9 +42,19 @@ export function decodeHtml(value: string) {
   return element.value;
 }
 
+function firstElementByTagName(parent: Element | Document, name: string) {
+  const directMatch = parent.getElementsByTagName(name)[0];
+  if (directMatch || !name.includes(':')) {
+    return directMatch;
+  }
+
+  const localName = name.split(':').at(-1) ?? name;
+  return parent.getElementsByTagNameNS('*', localName)[0];
+}
+
 function textFrom(parent: Element | Document, names: string[]) {
   for (const name of names) {
-    const value = parent.getElementsByTagName(name)[0]?.textContent?.trim();
+    const value = firstElementByTagName(parent, name)?.textContent?.trim();
     if (value) {
       return decodeHtml(value);
     }
@@ -67,7 +77,7 @@ function parseRss(xml: Document, feedUrl: string): RssFeed | null {
   const items = Array.from(channel.querySelectorAll('item')).map<RssItem>((item) => ({
     title: textFrom(item, ['title']) || 'Untitled',
     link: textFrom(item, ['link', 'guid']),
-    pubDate: textFrom(item, ['pubDate', 'date']),
+    pubDate: textFrom(item, ['pubDate', 'dc:date', 'published', 'updated', 'date']),
     description: textFrom(item, ['content:encoded', 'description', 'summary']),
   }));
 
@@ -122,7 +132,13 @@ export function parseFeed(xmlText: string, feedUrl: string): RssFeed {
     throw new Error('No RSS or Atom channel was found.');
   }
 
-  return feed;
+  return {
+    ...feed,
+    channel: {
+      ...feed.channel,
+      items: sortItemsByNewest(feed.channel.items),
+    },
+  };
 }
 
 function absoluteUrl(candidateUrl: string, baseUrl: string) {
@@ -192,6 +208,10 @@ function dateValue(value: string) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+function sortItemsByNewest(items: RssItem[]) {
+  return [...items].sort((left, right) => dateValue(right.pubDate) - dateValue(left.pubDate));
+}
+
 export function formatDate(value: string, timeZone: string) {
   const parsed = Date.parse(value);
   if (Number.isNaN(parsed)) {
@@ -221,8 +241,7 @@ export async function mergeFeeds(feeds: FeedSource[], title: string): Promise<Rs
     .filter((item, index, allItems) => {
       const key = item.link || `${item.title}-${item.pubDate}`;
       return allItems.findIndex((other) => (other.link || `${other.title}-${other.pubDate}`) === key) === index;
-    })
-    .sort((left, right) => dateValue(right.pubDate) - dateValue(left.pubDate));
+    });
 
   return {
     url: title.toLowerCase().replace(/\s+/g, '-'),
@@ -230,7 +249,7 @@ export async function mergeFeeds(feeds: FeedSource[], title: string): Promise<Rs
       title,
       link: '',
       description: `${feeds.length} feed${feeds.length === 1 ? '' : 's'}`,
-      items,
+      items: sortItemsByNewest(items),
     },
   };
 }
